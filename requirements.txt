@@ -1,6 +1,6 @@
-streamlit
-crewai>=0.30.14
-langchain
-openai
-requests
-feedparser
+streamlit==1.35.0
+crewai==0.30.6
+langchain==0.1.17
+openai==1.30.1
+requests==2.31.0
+feedparser==6.0.11

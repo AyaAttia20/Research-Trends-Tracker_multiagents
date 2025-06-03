@@ -1,9 +1,9 @@
-crewai==0.28.8
+rewai==0.28.8
 crewai_tools==0.1.6
-langchain>=0.0.142
+langchain==0.0.142
 langchain_community>=0.0.30
 feedparser
-chromadb[clickhouse,duckdb]
-embedchain
+chromadb[duckdb,clickhouse]==0.3.29
+embedchain==0.1.17
 requests
 streamlit

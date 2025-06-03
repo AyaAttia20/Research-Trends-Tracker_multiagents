@@ -4,7 +4,11 @@ import requests
 import feedparser
 from crewai import Agent, Task, Crew
 from langchain.tools import Tool
-from langchain_community.chat_models import ChatOpenAI  # Updated import
+from langchain_community.chat_models import ChatOpenAI
+
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+os.environ["OPENAI_API_KEY"] = "dummy"  
+
 
 # Set page config for better UI
 st.set_page_config(page_title="Research Trends Tracker", layout="wide")

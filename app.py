@@ -8,6 +8,7 @@ from langchain_community.chat_models import ChatOpenAI
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 os.environ["OPENAI_API_KEY"] = "dummy"  
+os.environ["EMBEDCHAIN_VECTORDB"] = "faiss"
 
 
 # Set page config for better UI

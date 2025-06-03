@@ -1,6 +1,11 @@
-streamlit==1.35.0
-crewai==0.30.6
-langchain==0.1.17
+crewai==0.30.5
+langchain==0.1.14
 openai==1.30.1
-requests==2.31.0
-feedparser==6.0.11
+unstructured==0.14.7
+chromadb==0.4.22
+arxiv==2.1.0
+streamlit==1.35.0
+python-dotenv==1.0.1
+tiktoken==0.7.0
+beautifulsoup4==4.12.3
+requests==2.32.2

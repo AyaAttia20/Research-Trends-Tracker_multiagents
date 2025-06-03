@@ -1,6 +1,5 @@
 crewai==0.28.8
 crewai_tools==0.1.6
-embedchain==0.1.98
 faiss-cpu
 langchain==0.1.11
 langchain_community==0.0.30

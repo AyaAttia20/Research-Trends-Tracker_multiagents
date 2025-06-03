@@ -1,6 +1,6 @@
 streamlit
-crewai
-openai
+crewai>=0.30.14
 langchain
+openai
 requests
 feedparser

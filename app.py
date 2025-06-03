@@ -2,45 +2,46 @@ import streamlit as st
 import os
 import requests
 import feedparser
-
 from crewai import Agent, Task, Crew
 from langchain.tools import Tool
-from langchain.chat_models import ChatOpenAI
+from langchain_community.chat_models import ChatOpenAI  # Updated import
 
-st.title("Research Trends Tracker with Crew AI")
+# Set page config for better UI
+st.set_page_config(page_title="Research Trends Tracker", layout="wide")
+st.title("📊 Research Trends Tracker with CrewAI")
 
 # 1. Input API key securely
 api_key = st.text_input("Enter your OpenRouter API Key", type="password")
-
-# 2. Input research topic
 topic = st.text_input("Enter Research Topic", value="Artificial Intelligence")
 
 def fetch_arxiv(topic):
-    url = f'http://export.arxiv.org/api/query?search_query=all:{topic}&start=0&max_results=10'
-    response = requests.get(url)
-    feed = feedparser.parse(response.text)
-    results = []
-    for entry in feed.entries:
-        results.append({
-            "title": entry.title,
-            "summary": entry.summary,
-            "authors": [author.name for author in entry.authors]
-        })
-    return results
+    """Fetch papers from arXiv with error handling."""
+    try:
+        url = f'http://export.arxiv.org/api/query?search_query=all:{topic}&start=0&max_results=10'
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()  # Raise HTTP errors
+        feed = feedparser.parse(response.text)
+        return [
+            {
+                "title": entry.title,
+                "summary": entry.summary,
+                "authors": [author.name for author in entry.authors]
+            }
+            for entry in feed.entries
+        ]
+    except Exception as e:
+        st.error(f"arXiv fetch failed: {e}")
+        return []
 
 def arxiv_fetch_wrapper(input):
-    # Handle both string and dict input
-    if isinstance(input, dict):
-        topic = input.get("topic") or input.get("subject_area") or next(iter(input.values()))
-    else:
-        topic = input
+    """Handle both string and dict inputs for arXiv tool."""
+    topic = input.get("topic") if isinstance(input, dict) else input
     return fetch_arxiv(topic)
 
 if api_key and topic:
-    # Set the environment variable for OpenRouter API key
     os.environ["OPENROUTER_API_KEY"] = api_key
 
-    # Initialize the LLM with user API key
+    # Initialize LLM (Mistral via OpenRouter)
     llm = ChatOpenAI(
         model_name="mistralai/mistral-7b-instruct",
         openai_api_base="https://openrouter.ai/api/v1",
@@ -48,17 +49,17 @@ if api_key and topic:
         temperature=0.7
     )
 
-    # Setup tools and agents
+    # Define Tools
     arxiv_tool = Tool(
         name="ArxivResearchFetcher",
         func=arxiv_fetch_wrapper,
-        description="Fetches recent research papers from arXiv given a topic string or a dict with 'topic'",
-        return_direct=True
+        description="Fetches recent research papers from arXiv.",
     )
 
+    # Define Agents
     fetcher = Agent(
         role="Research Fetcher",
-        goal="Find the latest research papers on a given topic",
+        goal=f"Find the latest papers on {topic}",
         tools=[arxiv_tool],
         backstory="Expert at gathering academic papers using arXiv.",
         verbose=True,
@@ -67,79 +68,66 @@ if api_key and topic:
 
     analyzer = Agent(
         role="Trend Analyzer",
-        goal="Analyze recent papers and extract trending keywords and hot topics",
+        goal="Extract trending keywords and themes",
+        backstory="Skilled in text mining and NLP.",
         verbose=True,
-        backstory="Skilled in text mining and NLP to extract useful trends.",
         llm=llm
     )
 
     reporter = Agent(
-        role="Author & Institution Reporter",
-        goal="Find top authors and institutions publishing in the research field",
+        role="Author Reporter",
+        goal="Identify top authors and institutions",
+        backstory="Specializes in academic contributor analysis.",
         verbose=True,
-        backstory="Specializes in identifying the key contributors in academic fields.",
         llm=llm
     )
 
+    # Define Tasks
     fetch_task = Task(
-        description=f"Fetch recent research papers from arXiv for the topic {topic}.",
-        expected_output="A list of paper titles and abstracts.",
-        agent=fetcher,
-        async_execution=False
+        description=f"Fetch papers on '{topic}' from arXiv.",
+        expected_output="List of paper titles and abstracts.",
+        agent=fetcher
     )
 
     trend_task = Task(
-        description=(
-            f"Analyze the following list of research papers (title, summary, authors) on the topic '{topic}' "
-            "and identify the top 5 trending keywords or research themes in bullet points.\n"
-            "Data:\n"
-        ),
-        expected_output=(
-            "- A list of 5 trending research topics or keywords with 1-sentence descriptions each.\n"
-            "- Format: Bullet points."
-        ),
+        description=f"Analyze papers to identify top 5 trends in '{topic}'.",
+        expected_output="Bullet list of 5 trends with 1-sentence descriptions.",
         agent=analyzer,
-        context=[fetch_task],
-        async_execution=False
+        context=[fetch_task]
     )
 
     author_task = Task(
-        description=(
-            f"Based on the list of paper titles, authors, and summaries for the topic {topic}, "
-            "identify the most frequently mentioned authors. "
-            "If affiliations are mentioned or can be inferred, include them. "
-            "Return a list of the top 3–5 authors with their affiliation (if available) and how many times they appeared."
-        ),
-        expected_output=(
-            "- A list of top 3–5 authors, their affiliations, and publication counts.\n"
-            "- Format: Author Name – Institution (N papers)"
-        ),
+        description=f"List top 3-5 authors in '{topic}' with affiliations.",
+        expected_output="Format: Author Name – Institution (N papers)",
         agent=reporter,
-        context=[fetch_task],
-        async_execution=False
+        context=[fetch_task]
     )
 
-    crew = Crew(
-        agents=[fetcher, analyzer, reporter],
-        tasks=[fetch_task, trend_task, author_task],
-        verbose=True
-    )
-
-    if st.button("Run Research Trends Analysis"):
-        with st.spinner("Running Crew AI tasks..."):
+    # Run Crew
+    if st.button("🚀 Run Analysis"):
+        with st.spinner("Running CrewAI tasks..."):
+            crew = Crew(
+                agents=[fetcher, analyzer, reporter],
+                tasks=[fetch_task, trend_task, author_task],
+                verbose=True
+            )
             result = crew.kickoff(inputs={"topic": topic})
 
-            st.subheader("Overall Result")
-            st.write(result)
+            # Display Results
+            st.subheader("🔍 Research Trends")
+            if trend_task.output:
+                st.write(trend_task.output)
+            else:
+                st.warning("No trend analysis output generated.")
 
-            st.subheader("Fetch Task Output")
-            st.json(fetch_task.output)
+            st.subheader("👥 Top Authors")
+            if author_task.output:
+                st.write(author_task.output)
+            else:
+                st.warning("No author data found.")
 
-            st.subheader("Trend Analyzer Output")
-            st.text(trend_task.output)
-
-            st.subheader("Author Reporter Output")
-            st.text(author_task.output)
+            st.subheader("📄 Fetched Papers (Raw)")
+            st.json(fetch_task.output or "No papers fetched.")
 
 else:
-    st.info("Please enter your OpenRouter API Key and research topic above.")
+    st.info("Please enter your OpenRouter API Key and research topic.")

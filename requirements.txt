@@ -1,9 +1,10 @@
-rewai==0.28.8
+crewai==0.28.8
 crewai_tools==0.1.6
-langchain==0.0.142
 langchain_community>=0.0.30
+langchain
 feedparser
-chromadb[duckdb,clickhouse]==0.3.29
-embedchain==0.1.17
-requests
-streamlit
+markdown-it-py==3.0.0
+mdurl==0.1.2
+pygments==2.19.1
+rich>=13.7.0,<14.0.0
+typing-extensions==4.14.0
